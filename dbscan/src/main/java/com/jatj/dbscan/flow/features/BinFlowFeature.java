@@ -1,4 +1,4 @@
-package com.jatj.dbscan.flow;
+package com.jatj.dbscan.flow.features;
 
 import com.jatj.dbscan.Helpers;
 

@@ -1,4 +1,4 @@
-package com.jatj.dbscan.flow;
+package com.jatj.dbscan.flow.features;
 
 import java.util.ArrayList;
 

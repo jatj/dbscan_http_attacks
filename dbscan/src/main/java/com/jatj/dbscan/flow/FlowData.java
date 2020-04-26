@@ -1,6 +1,10 @@
 package com.jatj.dbscan.flow;
 
 import com.jatj.dbscan.flow.keys.FlowKey;
+import com.jatj.dbscan.cluster.structures.DataPoint;
+import com.jatj.dbscan.flow.features.ValueFlowFeature;
+import com.jatj.dbscan.flow.features.DistributionFlowFeature;
+import com.jatj.dbscan.flow.features.IFlowFeature;
 
 import java.util.logging.Logger;
 import java.util.HashMap;
@@ -10,7 +14,7 @@ import java.util.logging.Level;
 /**
  * FlowData, represents the relevant features of a flow
  */
-public class FlowData {
+public class FlowData implements DataPoint {
     // Map index in csv string to the feature name.
     // srcip,srcport,dstip,dstport,proto,total_fpackets,total_fvolume,total_bpackets,total_bvolume,min_fpktl,mean_fpktl,max_fpktl,std_fpktl,min_bpktl,mean_bpktl,max_bpktl,std_bpktl,min_fiat,mean_fiat,max_fiat,std_fiat,min_biat,mean_biat,max_biat,std_biat,duration,min_active,mean_active,max_active,std_active,min_idle,mean_idle,max_idle,std_idle,sflow_fpackets,sflow_fbytes,sflow_bpackets,sflow_bbytes,fpsh_cnt,bpsh_cnt,furg_cnt,burg_cnt,total_fhlen,total_bhlen,dscp,firstTime,flast,blast,class
     private static final Map<Integer, String> INDEX_TO_FEATURE = new HashMap<Integer, String>() {
@@ -160,6 +164,11 @@ public class FlowData {
     public FlowKey backwadKey;
     public String flowClass;
 
+    /**
+     * DataPoint properties
+     */
+    public Integer clusterId;
+
     public FlowData(int srcip, int srcport, int dstip, int dstport, byte proto, byte dscp, long firstTime, long flast, long blast, IFlowFeature[] f, String flowClass) {
         this.forwardKey = new FlowKey(srcip, srcport, dstip, dstport, proto);
         this.backwadKey = new FlowKey(dstip, dstport, srcip, srcport, proto);
@@ -272,5 +281,24 @@ public class FlowData {
         }
         return new FlowData(srcip, srcport, dstip, dstport, proto, dscp, firstTime, flast, blast, f, flowClass);
     }
+
+    //#region DataPoint implementation
     
+    public double distance(DataPoint datapoint){
+        if(!(datapoint instanceof FlowData)) {
+            return Double.MAX_VALUE;
+        }
+        
+        return 0;
+    }
+	
+	public void setCluster(int id){
+        clusterId = id;
+    }
+	
+	public int getCluster(){
+        return clusterId;
+    }
+
+    //#endregion DataPoint implementation
 }
