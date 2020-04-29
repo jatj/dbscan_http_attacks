@@ -1,8 +1,16 @@
 package com.jatj.dbscan;
 
+import com.jatj.dbscan.flow.features.IFlowFeature;
+
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.lang.Math;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Scanner;
 
 /**
  * Helpers functions for DBScan
@@ -70,6 +78,71 @@ public class Helpers {
             }
         }
         return maxN;
+    }
+
+    /** Calculates the normalized squared distance of two values. */
+    public static double normalizedSquaredDistance(double a, double b) throws IllegalArgumentException{
+        if(a == 0 && b == 0){
+            return 0;
+        }
+        if(a < 0 || b < 0) {
+            throw new IllegalArgumentException("Vector values are not positive");
+        }
+        return Math.pow((a-b)/(a+b),2);
+    }
+
+    /** Calculates the normalized euclidean distance between two vectors. */
+    public static double normalizedEuclideanDistance(double[] a, double[] b) throws IllegalArgumentException {
+        if(a.length != b.length){
+            throw new IllegalArgumentException("Vector's size differ");
+        }
+        double sum = 0;
+        for(int i = 0; i < a.length; i++){
+            sum+=normalizedSquaredDistance(a[i], b[i]);
+        }
+        return Math.sqrt(sum);
+    }
+
+    /** Fills the vector with the feature values from fromIndex. */
+    public static double[] fillVector(double[] vector, int fromIndex, IFlowFeature feature) throws IllegalArgumentException {
+        ArrayList<Long> vals = feature.ToArrayList();
+        if (fromIndex+vals.size() > vector.length){
+            throw new IllegalArgumentException("Can't allocate all feature values on vector");
+        }
+        for(int i = 0; i < vals.size(); i++){
+            vector[i] = vals.get(i);
+        }
+        return vector;
+    }
+
+    public static ArrayList<String> getCsv(String resource){
+        ArrayList<String> csv = new ArrayList<>();
+        try {
+            InputStream i = Helpers.class.getClassLoader().getResourceAsStream(resource);
+            BufferedReader r = new BufferedReader(new InputStreamReader(i));
+
+            String l;
+            while((l = r.readLine()) != null) {
+                csv.add(l);
+            } 
+            i.close();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return csv;
+    }
+
+    public static int ipToInt(String ipAddress) {
+        String[] ipAddressInArray = ipAddress.split("\\.");
+        int result = 0;
+        for (int i = 0; i < ipAddressInArray.length; i++) {
+        
+            int power = 3 - i;
+            int ip = Integer.parseInt(ipAddressInArray[i]);
+            result += ip * Math.pow(256, power);
+        
+        }
+        return result;
     }
 
 }

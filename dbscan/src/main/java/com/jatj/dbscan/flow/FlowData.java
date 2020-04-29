@@ -1,5 +1,6 @@
 package com.jatj.dbscan.flow;
 
+import com.jatj.dbscan.Helpers;
 import com.jatj.dbscan.flow.keys.FlowKey;
 import com.jatj.dbscan.cluster.structures.DataPoint;
 import com.jatj.dbscan.flow.features.ValueFlowFeature;
@@ -14,7 +15,7 @@ import java.util.logging.Level;
 /**
  * FlowData, represents the relevant features of a flow
  */
-public class FlowData implements DataPoint {
+public class FlowData extends DataPoint {
     // Map index in csv string to the feature name.
     // srcip,srcport,dstip,dstport,proto,total_fpackets,total_fvolume,total_bpackets,total_bvolume,min_fpktl,mean_fpktl,max_fpktl,std_fpktl,min_bpktl,mean_bpktl,max_bpktl,std_bpktl,min_fiat,mean_fiat,max_fiat,std_fiat,min_biat,mean_biat,max_biat,std_biat,duration,min_active,mean_active,max_active,std_active,min_idle,mean_idle,max_idle,std_idle,sflow_fpackets,sflow_fbytes,sflow_bpackets,sflow_bbytes,fpsh_cnt,bpsh_cnt,furg_cnt,burg_cnt,total_fhlen,total_bhlen,dscp,firstTime,flast,blast,class
     private static final Map<Integer, String> INDEX_TO_FEATURE = new HashMap<Integer, String>() {
@@ -162,14 +163,16 @@ public class FlowData implements DataPoint {
     public byte dscp; // The first set DSCP field for the flow.
     public FlowKey forwardKey;
     public FlowKey backwadKey;
-    public String flowClass;
 
     /**
      * DataPoint properties
      */
-    public Integer clusterId;
+    static final int NUM_RELEVANT_FEATURES = 23;
+    public String flowClass = "undefined";
+    public Integer clusterId = -1;
 
     public FlowData(int srcip, int srcport, int dstip, int dstport, byte proto, byte dscp, long firstTime, long flast, long blast, IFlowFeature[] f, String flowClass) {
+        super();
         this.forwardKey = new FlowKey(srcip, srcport, dstip, dstport, proto);
         this.backwadKey = new FlowKey(dstip, dstport, srcip, srcport, proto);
         this.f = f;
@@ -238,13 +241,13 @@ public class FlowData implements DataPoint {
                     flowClass = token;
                 break;
                 case "srcip":
-                    srcip = Integer.parseInt(token);
+                    srcip = Helpers.ipToInt(token);
                 break;
                 case "srcport":
                     srcport = Integer.parseInt(token);
                 break;
                 case "dstip":
-                    dstip = Integer.parseInt(token);
+                    dstip = Helpers.ipToInt(token);
                 break;
                 case "dstport":
                     dstport = Integer.parseInt(token);
@@ -284,20 +287,57 @@ public class FlowData implements DataPoint {
 
     //#region DataPoint implementation
     
+    /**
+     * Calculates the distance between two flows.
+     * Since we are looking for attacks we will limit the features used to calculate this only from forward direction,
+     * which is the direction the attacker would have.
+     * @param datapoint to be compared to the current one, if it isn't a FlowData object it will return Double.MAX_VALUE.
+     * @return Distance between two DataPoints.
+     */
+    @Override
     public double distance(DataPoint datapoint){
         if(!(datapoint instanceof FlowData)) {
             return Double.MAX_VALUE;
         }
+        FlowData otherFlow = (FlowData) datapoint;
         
-        return 0;
+        return Helpers.normalizedEuclideanDistance(this.getVector(), otherFlow.getVector());
     }
-	
+
+    /**
+     * Generates a vector with the relevant flow data.
+     * @see the README for a list of relevant features.
+     */
+    private double[] getVector(){
+        double[] vector = new double[NUM_RELEVANT_FEATURES];
+        int i = 0;
+        vector[i++] = f[TOTAL_FPACKETS].Get();
+        vector[i++] = f[TOTAL_FVOLUME].Get();
+        vector = Helpers.fillVector(vector, i, f[FPKTL]); i+=4;
+        vector = Helpers.fillVector(vector, i, f[FIAT]); i+=4;
+        vector = Helpers.fillVector(vector, i, f[ACTIVE]); i+=4;
+        vector = Helpers.fillVector(vector, i, f[IDLE]); i+=4;
+        vector[i++] = f[SFLOW_FPACKETS].Get();
+        vector[i++] = f[SFLOW_FBYTES].Get();
+        vector[i++] = f[FPSH_CNT].Get();
+        vector[i++] = f[FURG_CNT].Get();
+        vector[i++] = f[TOTAL_FHLEN].Get();
+        return vector;
+    }
+    
+    @Override
 	public void setCluster(int id){
         clusterId = id;
     }
-	
+    
+    @Override
 	public int getCluster(){
         return clusterId;
+    }
+
+    @Override
+    public String getLabel(){
+        return flowClass;
     }
 
     //#endregion DataPoint implementation
