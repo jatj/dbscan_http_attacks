@@ -19,18 +19,19 @@ import java.util.logging.Level;
  */
 public class App {
     private static final Logger logger = Logger.getLogger("DBScan_app");
-    private static final String RESOURCE_FILE = "dataset_1k.csv";
+    private static final String RESOURCE_FILE = "dataset_500.csv";
     private static final double MAX_DISTANCE = 0.05;
     private static final int MIN_POINTS = 25;
 
     private static double globalDurationMean = 0;
     private static double globalDurationVariance = 0;
+    private static double globalFPS = 0;
 
     public static void main( String[] args ) {
         App app = new App();
 
         ArrayList<DataPoint> flows = loadFlows(RESOURCE_FILE);
-        logger.log(Level.INFO, String.format("Loaded %d samples, with μ duration: %f, variance duration: %f", flows.size(), globalDurationMean, globalDurationVariance));
+        logger.log(Level.INFO, String.format("Loaded %d samples, with μ duration: %f, variance duration: %f, fps: %f", flows.size(), globalDurationMean, globalDurationVariance, globalFPS));
 
         DBScan dbscan = new DBScan(MAX_DISTANCE, MIN_POINTS);
         dbscan.setPoints(flows);
@@ -44,11 +45,12 @@ public class App {
             double distanceMean = 0;
             double distanceVariance = 0;
             double[] attackIndicators = new double[]{
-                0, // duration
+                0, // duration microseconds
                 0, // |flast-blast|
                 0, // fps flows per second
                 0, // bpms bytes per microsecond
                 0, // unique dsts
+                0, // cluster duration
             };
             double firstTimeSecs = Double.MAX_VALUE;
             double lastTimeSecs = Double.MIN_VALUE;
@@ -60,9 +62,10 @@ public class App {
                     put(2, "fps");
                     put(3, "bpms");
                     put(4, "# Unique destinations");
+                    put(5, "Cluster Duration");
                 }
             };
-            // TODO(abrahamtorres): Move this to Cluster.analize() and refactor.
+            // TODO(abrahamtorres): Move this to DBScan.analize() and refactor.
             Map<String, Double> distances = new HashMap<>();
             for(int i=0; i < c.points.size(); i++){
                 FlowData flowA = (FlowData) c.points.get(i);
@@ -104,6 +107,7 @@ public class App {
             attackIndicators[2] = c.points.size()/Math.abs(lastTimeSecs - firstTimeSecs); // fps
             attackIndicators[3] /= c.points.size(); // bpms
             attackIndicators[4] = uniqueDestinations.size(); // # unique destinations
+            attackIndicators[5] = Math.abs(lastTimeSecs - firstTimeSecs); // cluster duration
 
             // Log cluster description
             String clusterDesc = "";
@@ -125,11 +129,17 @@ public class App {
             flows.add((DataPoint) flow);
             globalDurationMean += flow.f[FlowData.DURATION].Get();
         }
+        double firstTimeSecs = Double.MAX_VALUE;
+        double lastTimeSecs = Double.MIN_VALUE;
+
         globalDurationMean /= flows.size();
         for(DataPoint flow : flows){
             globalDurationVariance += Math.pow(((FlowData) flow).f[FlowData.DURATION].Get() - globalDurationMean, 2);
+            firstTimeSecs = Math.min(firstTimeSecs, ((FlowData) flow).firstTime);
+            lastTimeSecs = Math.max(lastTimeSecs, ((FlowData) flow).firstTime+((FlowData) flow).f[FlowData.DURATION].Get());
         }
         globalDurationVariance /= flows.size();
+        globalFPS = flows.size()/Math.abs(lastTimeSecs - firstTimeSecs);
         return flows;
     }
 }
