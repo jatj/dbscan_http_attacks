@@ -39,6 +39,10 @@ public abstract class DataPoint {
 		return this.uuid.equals(p.uuid);
 	}
 
+	public String getUuid(){
+		return uuid.toString();
+	}
+
 	public List<DataPoint> getNeighbors(List<DataPoint> points, double maxDistance) {
 		if(neighbors == null){
 			calculateNeighbors(points, maxDistance);

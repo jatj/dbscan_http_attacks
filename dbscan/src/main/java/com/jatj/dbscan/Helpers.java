@@ -102,6 +102,41 @@ public class Helpers {
         }
         return Math.sqrt(sum);
     }
+    
+    /** Calculates the squared distance of two values. */
+    public static double squaredDistance(double a, double b) throws IllegalArgumentException{
+        if(a == 0 && b == 0){
+            return 0;
+        }
+        if(a < 0 || b < 0) {
+            throw new IllegalArgumentException("Vector values are not positive");
+        }
+        return Math.pow((a-b),2);
+    }
+
+    /** Calculates the euclidean distance between two vectors. */
+    public static double euclideanDistance(double[] a, double[] b) throws IllegalArgumentException {
+        if(a.length != b.length){
+            throw new IllegalArgumentException("Vector's size differ");
+        }
+        double sum = 0;
+        for(int i = 0; i < a.length; i++){
+            sum+=squaredDistance(a[i], b[i]);
+        }
+        return Math.sqrt(sum);
+    }
+
+    /** Calculates the manhattan distance between two vectors. */
+    public static double manhattanDistance(double[] a, double[] b) throws IllegalArgumentException {
+        if(a.length != b.length){
+            throw new IllegalArgumentException("Vector's size differ");
+        }
+        double sum = 0;
+        for(int i = 0; i < a.length; i++){
+            sum+=Math.abs(a[i] - b[i]);
+        }
+        return Math.sqrt(sum);
+    }
 
     /** Fills the vector with the feature values from fromIndex. */
     public static double[] fillVector(double[] vector, int fromIndex, IFlowFeature feature) throws IllegalArgumentException {

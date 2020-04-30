@@ -122,28 +122,28 @@ public class FlowData extends DataPoint {
     /**
      * Features indexes
      */
-    static final int TOTAL_FPACKETS = 0;
-    static final int TOTAL_FVOLUME = 1;
-    static final int TOTAL_BPACKETS = 2;
-    static final int TOTAL_BVOLUME = 3;
-    static final int FPKTL = 4;
-    static final int BPKTL = 5;
-    static final int FIAT = 6;
-    static final int BIAT = 7;
-    static final int DURATION = 8;
-    static final int ACTIVE = 9;
-    static final int IDLE = 10;
-    static final int SFLOW_FPACKETS = 11;
-    static final int SFLOW_FBYTES = 12;
-    static final int SFLOW_BPACKETS = 13;
-    static final int SFLOW_BBYTES = 14;
-    static final int FPSH_CNT = 15;
-    static final int BPSH_CNT = 16;
-    static final int FURG_CNT = 17;
-    static final int BURG_CNT = 18;
-    static final int TOTAL_FHLEN = 19;
-    static final int TOTAL_BHLEN = 20;
-    static final int NUM_FEATURES = 21;
+    public static final int TOTAL_FPACKETS = 0;
+    public static final int TOTAL_FVOLUME = 1;
+    public static final int TOTAL_BPACKETS = 2;
+    public static final int TOTAL_BVOLUME = 3;
+    public static final int FPKTL = 4;
+    public static final int BPKTL = 5;
+    public static final int FIAT = 6;
+    public static final int BIAT = 7;
+    public static final int DURATION = 8;
+    public static final int ACTIVE = 9;
+    public static final int IDLE = 10;
+    public static final int SFLOW_FPACKETS = 11;
+    public static final int SFLOW_FBYTES = 12;
+    public static final int SFLOW_BPACKETS = 13;
+    public static final int SFLOW_BBYTES = 14;
+    public static final int FPSH_CNT = 15;
+    public static final int BPSH_CNT = 16;
+    public static final int FURG_CNT = 17;
+    public static final int BURG_CNT = 18;
+    public static final int TOTAL_FHLEN = 19;
+    public static final int TOTAL_BHLEN = 20;
+    public static final int NUM_FEATURES = 21;
 
     /**
      * Properties
@@ -168,6 +168,8 @@ public class FlowData extends DataPoint {
      * DataPoint properties
      */
     static final int NUM_RELEVANT_FEATURES = 23;
+    static final int NUM_ATTACK_INDICATORS = 4;
+    static final int IP_DIFFER = 0; // Set to 1 if want to take destination into distance function, if not set to 0.
     public String flowClass = "undefined";
     public Integer clusterId = -1;
 
@@ -285,6 +287,16 @@ public class FlowData extends DataPoint {
         return new FlowData(srcip, srcport, dstip, dstport, proto, dscp, firstTime, flast, blast, f, flowClass);
     }
 
+    public double[] getAttackIndicators(){
+        double[] vector = new double[NUM_ATTACK_INDICATORS];
+        int i = 0;
+        vector[i++] = f[DURATION].Get();
+        vector[i++] = Math.abs(flast-blast);
+        vector[i++] = firstTime;
+        vector[i++] = (f[DURATION].Get()>0) ? f[TOTAL_FVOLUME].Get()/f[DURATION].Get() : f[TOTAL_FVOLUME].Get();
+        return vector;
+    }
+
     //#region DataPoint implementation
     
     /**
@@ -301,15 +313,18 @@ public class FlowData extends DataPoint {
         }
         FlowData otherFlow = (FlowData) datapoint;
         
-        return Helpers.normalizedEuclideanDistance(this.getVector(), otherFlow.getVector());
+        return Helpers.normalizedEuclideanDistance(this.getVector(otherFlow, 0), otherFlow.getVector(this, IP_DIFFER));
+        // return Helpers.euclideanDistance(this.getVector(otherFlow, 0), otherFlow.getVector(this, IP_DIFFER));
+        // return Helpers.manhattanDistance(this.getVector(otherFlow, 0), otherFlow.getVector(this, IP_DIFFER));
     }
 
     /**
      * Generates a vector with the relevant flow data.
+     * @param otherFlow to be compared to the current one.
      * @see the README for a list of relevant features.
      */
-    private double[] getVector(){
-        double[] vector = new double[NUM_RELEVANT_FEATURES];
+    private double[] getVector(FlowData otherFlow, double ipDiffer){
+        double[] vector = new double[NUM_RELEVANT_FEATURES+2];
         int i = 0;
         vector[i++] = f[TOTAL_FPACKETS].Get();
         vector[i++] = f[TOTAL_FVOLUME].Get();
@@ -322,6 +337,9 @@ public class FlowData extends DataPoint {
         vector[i++] = f[FPSH_CNT].Get();
         vector[i++] = f[FURG_CNT].Get();
         vector[i++] = f[TOTAL_FHLEN].Get();
+        // Testing with dst ip and port.
+        vector[i++] = (dstip == otherFlow.dstip) ? 0 : ipDiffer;
+        vector[i++] = (dstport == otherFlow.dstport) ? 0 : ipDiffer;
         return vector;
     }
     

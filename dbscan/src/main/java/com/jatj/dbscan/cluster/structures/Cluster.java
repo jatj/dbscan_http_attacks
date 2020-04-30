@@ -43,15 +43,5 @@ public class Cluster {
 	public void clear() {
 		points.clear();
 	}
-
-	public void plotCluster() {
-		System.out.println("[Cluster: " + id + "]");
-		System.out.println("[Centroid: " + centroid + "]");
-		System.out.println("[Points: \n");
-		for (final DataPoint p : points) {
-			System.out.println(p);
-		}
-		System.out.println("]");
-	}
  
 }
